@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.routing import ValidationError
 
 app = Flask(__name__, static_url_path="/static")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:password@localhost:5432/proyecto1dbp'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:sebastian2103@localhost:5432/proyecto1dbp'
 db = SQLAlchemy(app)
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 app.secret_key = b'_5#y2L"F4Qpz\n\xec]/'
@@ -99,10 +99,49 @@ def register_user_get():
             return redirect(url_for('home'))
 
 
-@app.route('/login', methods=['GET'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+
+    res = {
+        'username': '',
+        'estado': 0, # si es cero hay error en logeo, si es 1 todo correcto,
+        'mensaje': ''
+    }
+
+    usuarioencontrado = {
+        'username': '',
+        'password': ''
+    }
+
+    if(request.method == 'POST'): 
+        # content = json.loads(request.data)
+        content = request.form
+        client = Client.query.filter_by(username=content['username']).first()
+
+        minombre = content['username']
+
+        if(client): 
+            if(client.password == content['psw']):
+                print("usuario logeado con exito")
+                #return "usuario registrado con exito"
+                return render_template('home.html', minombre=minombre) #aqui
+            else: 
+                print("la contraseña es incorrecta")
+
+                res['estado'] = 0
+                res['mensaje'] = 'Contraseña Incorrecta'
+
+                return render_template('login.html', res = res)
+            
+        else: 
+            print("el usuaro no es valido")
+            res['estado'] = 0
+            res['mensaje'] = 'Usuario no registrado'
+            return render_template('login.html', res = res)
+            #return 'El usuario no es valido'
+
     if request.method == 'GET':
-        return render_template('login.html')
+        return render_template('login.html', res = res)
 
 
 @app.route('/profile', methods=['GET'])
