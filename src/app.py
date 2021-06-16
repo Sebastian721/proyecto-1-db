@@ -49,34 +49,25 @@ def print_tiendas():
     if request.method == 'GET':
         return render_template('game.html', data=Game.query.all())
     else:
-        content = json.loads(request.data)
-        login_id = 3
-        print(content['id'])
+        content = json.loads(request.data) # como parametros del form
+        login_id = 2
         if Inventory.query.filter_by(c_id=login_id, g_id=content['id']).first() is not None:
             raise ValidationError('Juego ya comprado')
-        elif Client.query.filter_by(id=login_id).first().balance < Game.query.filter_by(id=content['id']).first().price:
+        elif Client.query.filter_by(id=login_id).first().balance < float(content['price']):
             raise ValidationError('Fondos Insuficientes')
         else:
             client = Client.query.filter_by(id=login_id).first()
-            client.balance -= Game.query.filter_by(id=content['id']).first().price
+            client.balance -= float(content['price'])
             db.session.add(Inventory(g_id=content['id'], c_id=login_id))
             db.session.commit()
             return json.dumps({'message': "ok"})
 
 
-@app.route('/inventory/<user_id>', methods=['GET', 'DELETE'])
+@app.route('/inventory/<user_id>', methods=['GET'])
 def print_stock(user_id):
-    if request.method == 'GET':
-        return render_template('inventory.html', data=db.session.query(Game)
-                               .join(Inventory)
-                               .filter(Game.id == Inventory.g_id, Inventory.c_id == user_id).all())
-    else:
-        content = json.loads(request.data)
-        login_id = 3
-        print(content['id'])
-        Inventory.query.filter_by(c_id=login_id, g_id=content['id']).delete()
-        db.session.commit()
-        return json.dumps({'message': "ok"})
+    return render_template('inventory.html', data=db.session.query(Game)
+                           .join(Inventory)
+                           .filter(Game.id == Inventory.g_id, Inventory.c_id == user_id).all())
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -99,10 +90,49 @@ def register_user_get():
             return redirect(url_for('home'))
 
 
-@app.route('/login', methods=['GET'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+
+    res = {
+        'username': '',
+        'estado': 0, # si es cero hay error en logeo, si es 1 todo correcto,
+        'mensaje': ''
+    }
+
+    usuarioencontrado = {
+        'username': '',
+        'password': ''
+    }
+
+    if(request.method == 'POST'): 
+        # content = json.loads(request.data)
+        content = request.form
+        client = Client.query.filter_by(username=content['username']).first()
+
+        minombre = content['username']
+
+        if(client): 
+            if(client.password == content['psw']):
+                print("usuario logeado con exito")
+                #return "usuario registrado con exito"
+                return render_template('home.html', minombre=minombre) #aqui
+            else: 
+                print("la contraseña es incorrecta")
+
+                res['estado'] = 0
+                res['mensaje'] = 'Contraseña Incorrecta'
+
+                return render_template('login.html', res = res)
+            
+        else: 
+            print("el usuaro no es valido")
+            res['estado'] = 0
+            res['mensaje'] = 'Usuario no registrado'
+            return render_template('login.html', res = res)
+            #return 'El usuario no es valido'
+
     if request.method == 'GET':
-        return render_template('login.html')
+        return render_template('login.html', res = res)
 
 
 @app.route('/profile', methods=['GET'])
